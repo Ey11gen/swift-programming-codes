@@ -1,0 +1,44 @@
+// ============================================================
+// Chapter 01 — Getting Started with Swift and Xcode
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Your First Swift Program
+
+print("Hello, World!")
+print("Learning Swift in 2026")
+
+// MARK: - Single-line comments
+
+// This entire line is a comment. The compiler ignores it completely.
+print("Hello, World!") // This part is a comment. Only the code to its left runs.
+
+// MARK: - Multi-line comments
+
+/*
+   This is a multi-line comment.
+   It can span as many lines as needed.
+   The compiler ignores all of this text.
+*/
+print("Hello, World!")
+
+// MARK: - Syntax error example (do NOT run this line — it demonstrates an error)
+// print("Hello, World!"   // ERROR: missing closing parenthesis
+
+// MARK: - Understanding print
+
+// print is a function that writes text to the Console.
+// "Hello, World!" is a String — a sequence of characters in double quotes.
+
+let message = "Welcome to Swift!"
+print(message)
+
+let number = 42
+print("The answer is \(number)")
+
+# Chapter 01
+
+Files: Chapter01_GettingStarted.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

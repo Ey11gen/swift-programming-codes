@@ -1,0 +1,106 @@
+// ============================================================
+// Chapter 11 — Memory Management and ARC
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - ARC Lifecycle
+
+class NetworkSession {
+    let identifier: String
+    init(identifier: String) {
+        self.identifier = identifier
+        print("Session \(identifier) created.")
+    }
+    deinit { print("Session \(identifier) destroyed.") }
+}
+
+do {
+    let session = NetworkSession(identifier: "A")
+    let sessionCopy = session
+    print("Same object: \(session === sessionCopy)")
+}
+
+// MARK: - Strong Reference Cycle (demonstrates the PROBLEM)
+
+class Person {
+    let name: String
+    var apartment: Apartment?
+    init(_ name: String) { self.name = name; print("\(name) initialized") }
+    deinit { print("\(name) deinitialized") }
+}
+class Apartment {
+    let unit: String
+    var tenant: Person?
+    init(_ unit: String) { self.unit = unit }
+    deinit { print("Apartment \(unit) deinitialized") }
+}
+
+// MARK: - Fixing Cycle with weak
+
+class PersonFixed {
+    let name: String
+    var apartment: ApartmentFixed?
+    init(_ name: String) { self.name = name }
+    deinit { print("\(name) deinitialized") }
+}
+class ApartmentFixed {
+    let unit: String
+    weak var tenant: PersonFixed?   // weak breaks the cycle
+    init(_ unit: String) { self.unit = unit }
+    deinit { print("Apartment \(unit) deinitialized") }
+}
+
+do {
+    var alice: PersonFixed?    = PersonFixed("Alice")
+    var apt:   ApartmentFixed? = ApartmentFixed("4B")
+    alice!.apartment = apt
+    apt!.tenant      = alice
+}
+// Both deinit messages appear — no leak
+
+// MARK: - unowned Reference
+
+class Customer {
+    let name: String; var card: CreditCard?
+    init(_ name: String) { self.name = name }
+    deinit { print("\(name) deinitialized") }
+}
+class CreditCard {
+    let number: String
+    unowned let customer: Customer
+    init(number: String, customer: Customer) { self.number = number; self.customer = customer }
+    deinit { print("Card \(number) deinitialized") }
+}
+do {
+    let carlos = Customer("Carlos")
+    carlos.card = CreditCard(number: "4111-1111", customer: carlos)
+    print("\(carlos.name) has card \(carlos.card!.number)")
+}
+
+// MARK: - Closure Retain Cycle and Capture List
+
+class TimerManager {
+    var name: String
+    var onTick: (() -> Void)?
+    init(_ name: String) { self.name = name }
+    func start() {
+        onTick = { [weak self] in
+            guard let self = self else { print("Timer deallocated"); return }
+            print("Tick from \(self.name)")
+        }
+    }
+    deinit { print("\(name) destroyed") }
+}
+do {
+    let timer = TimerManager("Timer B")
+    timer.start()
+    timer.onTick?()
+}
+// "Timer B destroyed" appears — cycle is broken
+
+# Chapter 11
+
+Files: Chapter11_MemoryManagement.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

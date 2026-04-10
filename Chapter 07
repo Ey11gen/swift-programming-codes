@@ -1,0 +1,99 @@
+// ============================================================
+// Chapter 07 — Enumerations and Advanced Pattern Matching
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Basic Enums
+
+enum Direction { case north, south, east, west }
+enum Season    { case spring, summer, autumn, winter }
+
+var heading: Direction = .north
+func describeDirection(_ d: Direction) -> String {
+    switch d {
+    case .north: return "Heading north."
+    case .south: return "Heading south."
+    case .east:  return "Heading east."
+    case .west:  return "Heading west."
+    }
+}
+print(describeDirection(.east))
+
+enum Compass {
+    case north, south, east, west
+    func opposite() -> Compass {
+        switch self { case .north: return .south; case .south: return .north
+                      case .east:  return .west;  case .west:  return .east }
+    }
+    var symbol: String {
+        switch self { case .north: return "N"; case .south: return "S"
+                      case .east:  return "E"; case .west:  return "W" }
+    }
+}
+let dir = Compass.north
+print(dir.symbol, dir.opposite().symbol)
+
+// MARK: - Raw Values
+
+enum Planet: Int { case mercury = 1, venus, earth, mars, jupiter }
+print(Planet.earth.rawValue)
+print(Planet(rawValue: 3)!)
+
+enum HTTPMethod: String { case get = "GET"; case post = "POST"; case delete = "DELETE" }
+print(HTTPMethod.post.rawValue)
+
+// MARK: - Associated Values
+
+enum NetworkResult {
+    case success(data: String, statusCode: Int)
+    case failure(errorMessage: String, statusCode: Int)
+    case noConnection
+}
+let result1 = NetworkResult.success(data: "Data loaded", statusCode: 200)
+let result2 = NetworkResult.failure(errorMessage: "Not found", statusCode: 404)
+
+func handleResult(_ r: NetworkResult) {
+    switch r {
+    case .success(let data, let code): print("Success (\(code)): \(data)")
+    case .failure(let msg, let code):  print("Error \(code): \(msg)")
+    case .noConnection:                print("No internet.")
+    }
+}
+handleResult(result1); handleResult(result2)
+
+// MARK: - Recursive Enum
+
+indirect enum ArithmeticExpression {
+    case number(Int)
+    case add(ArithmeticExpression, ArithmeticExpression)
+    case multiply(ArithmeticExpression, ArithmeticExpression)
+}
+func evaluate(_ e: ArithmeticExpression) -> Int {
+    switch e {
+    case .number(let v):        return v
+    case .add(let l, let r):    return evaluate(l) + evaluate(r)
+    case .multiply(let l, let r): return evaluate(l) * evaluate(r)
+    }
+}
+// (5 + 3) * 2 = 16
+let expr = ArithmeticExpression.multiply(.add(.number(5), .number(3)), .number(2))
+print(evaluate(expr))
+
+// MARK: - if case, guard case, for case
+
+let status = NetworkResult.success(data: "Welcome!", statusCode: 200)
+if case .success(let data, _) = status { print("Got: \(data)") }
+
+let results: [NetworkResult] = [
+    .success(data: "Page 1", statusCode: 200),
+    .failure(errorMessage: "Timeout", statusCode: 408),
+    .success(data: "Page 2", statusCode: 200)
+]
+for case .success(let data, _) in results { print("Loaded: \(data)") }
+
+# Chapter 07
+
+Files: Chapter07_Enumerations.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

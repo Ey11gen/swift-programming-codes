@@ -1,0 +1,417 @@
+// ============================================================
+// Chapter 20 — Capstone Project: ReadingLog
+// BookSearchService.swift
+// ============================================================
+
+import Foundation
+
+actor BookSearchService {
+    static let shared = BookSearchService()
+    private let baseURL = "https://www.googleapis.com/books/v1/volumes"
+
+    func search(query: String, maxResults: Int = 20) async throws -> [Book] {
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        var components = URLComponents(string: baseURL)!
+        components.queryItems = [
+            URLQueryItem(name: "q",           value: query),
+            URLQueryItem(name: "maxResults",   value: String(maxResults)),
+            URLQueryItem(name: "printType",    value: "books"),
+            URLQueryItem(name: "langRestrict", value: "en"),
+        ]
+        guard let url = components.url else { throw URLError(.badURL) }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw URLError(.badServerResponse)
+        }
+        return (try JSONDecoder().decode(BookSearchResponse.self, from: data)).items?.map { $0.toBook() } ?? []
+    }
+}
+
+// ============================================================
+// Chapter 20 — Capstone Project: ReadingLog
+// ContentViews.swift — All SwiftUI Views
+// NOTE: Add to a new Xcode SwiftUI project with SwiftData.
+//       Set minimum deployment target to iOS 17.
+// ============================================================
+
+import SwiftUI
+import SwiftData
+
+// MARK: - Root
+
+struct RootView: View {
+    var body: some View {
+        TabView {
+            SearchView()
+                .tabItem { Label("Search",     systemImage: "magnifyingglass") }
+            LibraryView()
+                .tabItem { Label("My Library", systemImage: "books.vertical") }
+            StatisticsView()
+                .tabItem { Label("Statistics", systemImage: "chart.bar") }
+        }
+    }
+}
+
+// MARK: - Search
+
+struct SearchView: View {
+    @State private var viewModel = SearchViewModel()
+    @Environment(\.modelContext) private var context
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if viewModel.query.isEmpty { placeholderView }
+                else if viewModel.isSearching { ProgressView("Searching...") }
+                else if let error = viewModel.errorMessage { Text("Error: \(error)").foregroundStyle(.red).padding() }
+                else if viewModel.results.isEmpty { Text("No books found.").foregroundStyle(.secondary) }
+                else {
+                    List(viewModel.results) { book in
+                        BookSearchRowView(book: book) { context.insert(ReadingRecord(from: book)) }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Search Books")
+            .searchable(text: $viewModel.query, prompt: "Title, author, or ISBN")
+            .onChange(of: viewModel.query) { viewModel.search() }
+        }
+    }
+
+    private var placeholderView: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "text.book.closed").font(.system(size: 60)).foregroundStyle(.secondary)
+            Text("Search for a book").font(.title2)
+            Text("Find books by title, author, or ISBN").foregroundStyle(.secondary)
+        }
+        .padding()
+    }
+}
+
+struct BookSearchRowView: View {
+    let book: Book; let onAdd: () -> Void
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: book.thumbnailURL) { img in img.resizable().scaledToFill() }
+                placeholder: { Rectangle().fill(.secondary.opacity(0.2)) }
+                .frame(width: 50, height: 70).cornerRadius(6)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(book.title).font(.headline).lineLimit(2)
+                Text(book.authorDisplay).font(.subheadline).foregroundStyle(.secondary)
+                if let p = book.pageCount { Text("\(p) pages").font(.caption).foregroundStyle(.tertiary) }
+            }
+            Spacer()
+            Button(action: onAdd) {
+                Image(systemName: "plus.circle").font(.title2).foregroundStyle(.blue)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Library
+
+struct LibraryView: View {
+    @Query(sort: \ReadingRecord.addedDate, order: .reverse) private var records: [ReadingRecord]
+    @State private var viewModel = ReadingListViewModel()
+    @State private var selectedRecord: ReadingRecord? = nil
+    @Environment(\.modelContext) private var context
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                filterBar; Divider()
+                let displayed = viewModel.filtered(records)
+                if displayed.isEmpty {
+                    Text(records.isEmpty ? "Add books from Search." : "No books match this filter.")
+                        .foregroundStyle(.secondary).padding()
+                } else {
+                    List {
+                        ForEach(displayed) { record in
+                            Button { selectedRecord = record } label: { LibraryRowView(record: record) }
+                                .buttonStyle(.plain)
+                        }
+                        .onDelete { offsets in offsets.forEach { context.delete(displayed[$0]) } }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("My Library")
+            .sheet(item: $selectedRecord) { record in RecordDetailView(record: record) }
+        }
+    }
+
+    private var filterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                FilterChip(label: "All", isSelected: viewModel.selectedFilter == nil) { viewModel.selectedFilter = nil }
+                ForEach(ReadingStatus.allCases, id: \.self) { s in
+                    FilterChip(label: s.rawValue, isSelected: viewModel.selectedFilter == s) { viewModel.selectedFilter = s }
+                }
+            }
+            .padding(.horizontal)
+        }
+        .padding(.vertical, 8)
+    }
+}
+
+struct FilterChip: View {
+    let label: String; let isSelected: Bool; let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Text(label).font(.subheadline)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(isSelected ? Color.blue : Color.secondary.opacity(0.15))
+                .foregroundStyle(isSelected ? .white : .primary)
+                .cornerRadius(20)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct LibraryRowView: View {
+    let record: ReadingRecord
+    var body: some View {
+        HStack(spacing: 12) {
+            AsyncImage(url: record.thumbnail.flatMap(URL.init)) { img in img.resizable().scaledToFill() }
+                placeholder: { Rectangle().fill(.secondary.opacity(0.2)) }
+                .frame(width: 44, height: 62).cornerRadius(4)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.title).font(.headline).lineLimit(1)
+                Text(record.authors).font(.subheadline).foregroundStyle(.secondary)
+                if record.status == .currentlyReading {
+                    ProgressView(value: record.progressPercent).tint(.blue)
+                    Text(record.progressDisplay).font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Text(record.status.rawValue).font(.caption)
+                        .foregroundStyle(record.status == .finished ? .green : .secondary)
+                }
+            }
+            Spacer()
+            if record.rating > 0 {
+                HStack(spacing: 1) {
+                    ForEach(1...record.rating, id: \.self) { _ in
+                        Image(systemName: "star.fill").font(.caption2).foregroundStyle(.yellow)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Record Detail
+
+struct RecordDetailView: View {
+    @Bindable var record: ReadingRecord
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Status") {
+                    Picker("Status", selection: $record.status) {
+                        ForEach(ReadingStatus.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                if record.status == .currentlyReading {
+                    Section("Progress") {
+                        Stepper("Pages read: \(record.pagesRead)", value: $record.pagesRead, in: 0...max(record.pageCount,1), step: 10)
+                        ProgressView(value: record.progressPercent).tint(.blue)
+                        Text(record.progressDisplay).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                if record.status == .finished {
+                    Section("Rating") {
+                        HStack {
+                            ForEach(1...5, id: \.self) { star in
+                                Image(systemName: star <= record.rating ? "star.fill" : "star")
+                                    .foregroundStyle(.yellow).font(.title2)
+                                    .onTapGesture { record.rating = star }
+                            }
+                        }
+                    }
+                }
+                Section("Personal Notes") {
+                    TextEditor(text: $record.personalNote).frame(minHeight: 100)
+                }
+                Section("Book Details") {
+                    LabeledContent("Title",  value: record.title)
+                    LabeledContent("Author", value: record.authors)
+                    if record.pageCount > 0 { LabeledContent("Pages", value: "\(record.pageCount)") }
+                    LabeledContent("Added",  value: record.addedDate.formatted(date: .abbreviated, time: .omitted))
+                }
+            }
+            .navigationTitle(record.title).navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+// MARK: - Statistics
+
+struct StatisticsView: View {
+    @Query private var allRecords: [ReadingRecord]
+    var finished:       [ReadingRecord] { allRecords.filter { $0.status == .finished } }
+    var currentlyRead:  [ReadingRecord] { allRecords.filter { $0.status == .currentlyReading } }
+    var totalPagesRead: Int             { allRecords.reduce(0) { $0 + $1.pagesRead } }
+    var averageRating:  Double {
+        let rated = finished.filter { $0.rating > 0 }
+        guard !rated.isEmpty else { return 0 }
+        return Double(rated.reduce(0) { $0 + $1.rating }) / Double(rated.count)
+    }
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Overview") {
+                    StatRow(label: "Total books",       value: "\(allRecords.count)")
+                    StatRow(label: "Finished",          value: "\(finished.count)")
+                    StatRow(label: "Currently reading", value: "\(currentlyRead.count)")
+                    StatRow(label: "Total pages read",  value: totalPagesRead.formatted())
+                    if averageRating > 0 {
+                        StatRow(label: "Average rating", value: String(format: "%.1f / 5.0", averageRating))
+                    }
+                }
+            }
+            .navigationTitle("Statistics")
+        }
+    }
+}
+
+struct StatRow: View {
+    let label: String; let value: String
+    var body: some View {
+        HStack { Text(label); Spacer(); Text(value).foregroundStyle(.secondary).font(.subheadline) }
+    }
+}
+
+// MARK: - App Entry Point
+
+@main
+struct ReadingLogApp: App {
+    var body: some Scene {
+        WindowGroup { RootView() }.modelContainer(for: ReadingRecord.self)
+    }
+}
+
+#Preview { RootView() }
+
+// ============================================================
+// Chapter 20 — Capstone Project: ReadingLog
+// Models.swift
+// ============================================================
+
+import Foundation
+
+struct Book: Identifiable, Codable, Hashable {
+    let id: String; let title: String; let authors: [String]
+    let description: String?; let pageCount: Int?
+    let thumbnail: String?; let publishedDate: String?
+
+    var authorDisplay: String { authors.isEmpty ? "Unknown Author" : authors.joined(separator: ", ") }
+    var thumbnailURL:  URL?   { thumbnail.flatMap(URL.init) }
+}
+struct BookSearchResponse: Codable { let totalItems: Int; let items: [BookVolume]? }
+struct BookVolume: Codable {
+    let id: String; let volumeInfo: VolumeInfo
+    func toBook() -> Book {
+        Book(id: id, title: volumeInfo.title, authors: volumeInfo.authors ?? [],
+             description: volumeInfo.description, pageCount: volumeInfo.pageCount,
+             thumbnail: volumeInfo.imageLinks?.thumbnail, publishedDate: volumeInfo.publishedDate)
+    }
+}
+struct VolumeInfo: Codable {
+    let title: String; let authors: [String]?; let description: String?
+    let pageCount: Int?; let publishedDate: String?; let imageLinks: ImageLinks?
+}
+struct ImageLinks: Codable { let thumbnail: String? }
+
+// ============================================================
+// Chapter 20 — Capstone Project: ReadingLog
+// ReadingRecord.swift (SwiftData Model)
+// ============================================================
+
+import SwiftData
+import Foundation
+
+enum ReadingStatus: String, Codable, CaseIterable {
+    case wantToRead       = "Want to Read"
+    case currentlyReading = "Reading"
+    case finished         = "Finished"
+}
+
+@Model
+class ReadingRecord {
+    var bookID: String; var title: String; var authors: String
+    var thumbnail: String?; var pageCount: Int; var pagesRead: Int
+    var statusRaw: String; var personalNote: String
+    var startDate: Date?; var finishDate: Date?; var addedDate: Date; var rating: Int
+
+    var status: ReadingStatus {
+        get { ReadingStatus(rawValue: statusRaw) ?? .wantToRead }
+        set { statusRaw = newValue.rawValue }
+    }
+    var progressPercent: Double {
+        guard pageCount > 0 else { return 0 }
+        return min(Double(pagesRead) / Double(pageCount), 1.0)
+    }
+    var progressDisplay: String { "\(pagesRead) / \(pageCount) pages" }
+
+    init(from book: Book) {
+        self.bookID = book.id; self.title = book.title; self.authors = book.authorDisplay
+        self.thumbnail = book.thumbnail; self.pageCount = book.pageCount ?? 0
+        self.pagesRead = 0; self.statusRaw = ReadingStatus.wantToRead.rawValue
+        self.personalNote = ""; self.addedDate = Date(); self.rating = 0
+    }
+}
+
+# Chapter 20
+
+Files: BookSearchService.swift,ContentViews.swift,Models.swift,ReadingRecord.swift,ViewModels.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.
+
+// ============================================================
+// Chapter 20 — Capstone Project: ReadingLog
+// ViewModels.swift
+// ============================================================
+
+import SwiftUI
+import Observation
+
+@Observable @MainActor
+class SearchViewModel {
+    var query:        String = ""
+    var results:      [Book] = []
+    var isSearching:  Bool = false
+    var errorMessage: String? = nil
+    private var searchTask: Task<Void, Never>?
+
+    func search() {
+        searchTask?.cancel()
+        let q = query
+        guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { results = []; return }
+        searchTask = Task {
+            isSearching = true; errorMessage = nil
+            do {
+                try await Task.sleep(nanoseconds: 400_000_000)
+                guard !Task.isCancelled else { isSearching = false; return }
+                results     = try await BookSearchService.shared.search(query: q)
+                isSearching = false
+            } catch is CancellationError { isSearching = false }
+            catch { errorMessage = error.localizedDescription; isSearching = false }
+        }
+    }
+}
+
+@Observable @MainActor
+class ReadingListViewModel {
+    var selectedFilter: ReadingStatus? = nil
+    var sortByTitle:    Bool = false
+
+    func filtered(_ records: [ReadingRecord]) -> [ReadingRecord] {
+        var list = records
+        if let filter = selectedFilter { list = list.filter { $0.status == filter } }
+        return sortByTitle ? list.sorted { $0.title < $1.title } : list.sorted { $0.addedDate > $1.addedDate }
+    }
+}

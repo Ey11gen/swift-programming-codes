@@ -1,0 +1,94 @@
+// ============================================================
+// Chapter 10 — Generics and the Swift Type System
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Generic Functions
+
+func swapValues<T>(_ a: inout T, _ b: inout T) {
+    let temp = a; a = b; b = temp
+}
+var x = 10, y = 20; swapValues(&x, &y); print(x, y)
+var hello = "Hello", world = "World"; swapValues(&hello, &world); print(hello, world)
+
+func firstIndex<T: Equatable>(of element: T, in array: [T]) -> Int? {
+    for (i, item) in array.enumerated() { if item == element { return i } }
+    return nil
+}
+print(firstIndex(of: "Rust", in: ["Swift", "Rust", "Go"]))
+print(firstIndex(of: 99, in: [10, 20, 30]))
+
+func makePair<Key, Value>(_ key: Key, _ value: Value) -> (Key, Value) { (key, value) }
+print(makePair("name", "Alice"))
+print(makePair(42, true))
+
+// MARK: - Generic Types
+
+struct Stack<Element> {
+    private var items: [Element] = []
+    mutating func push(_ item: Element) { items.append(item) }
+    mutating func pop() -> Element?    { items.isEmpty ? nil : items.removeLast() }
+    func peek() -> Element? { items.last }
+    var isEmpty: Bool { items.isEmpty }
+    var count: Int    { items.count }
+}
+var intStack = Stack<Int>()
+intStack.push(10); intStack.push(20); intStack.push(30)
+print(intStack.peek()!, intStack.pop()!, intStack.count)
+
+var stringStack = Stack<String>()
+stringStack.push("first"); stringStack.push("second")
+print(stringStack.pop()!)
+
+// MARK: - Associated Types
+
+protocol Container {
+    associatedtype Element
+    mutating func add(_ item: Element)
+    func get(at index: Int) -> Element?
+    var count: Int { get }
+}
+struct SimpleList<T>: Container {
+    private var items: [T] = []
+    mutating func add(_ item: T) { items.append(item) }
+    func get(at index: Int) -> T? { guard index < items.count else { return nil }; return items[index] }
+    var count: Int { items.count }
+}
+var list = SimpleList<String>()
+list.add("Swift"); list.add("Generics")
+print(list.get(at: 0)!, list.count)
+
+// MARK: - Opaque Types with some
+
+protocol Shape { var area: Double { get }; var perimeter: Double { get } }
+struct Square: Shape {
+    var side: Double
+    var area: Double      { side * side }
+    var perimeter: Double { 4 * side }
+}
+struct Circle2: Shape {
+    var radius: Double
+    var area: Double      { Double.pi * radius * radius }
+    var perimeter: Double { 2 * Double.pi * radius }
+}
+func makeDefaultShape() -> some Shape { Square(side: 1.0) }
+let s = makeDefaultShape()
+print(s.area, s.perimeter)
+
+// MARK: - Existential Types with any
+
+var dynamicShape: any Shape = Square(side: 5.0)
+print(dynamicShape.area)
+dynamicShape = Circle2(radius: 3.0)
+print(dynamicShape.area)
+
+let shapes: [any Shape] = [Square(side: 4.0), Circle2(radius: 2.0), Square(side: 10.0)]
+let totalArea = shapes.reduce(0.0) { $0 + $1.area }
+print("Total area: \(totalArea)")
+
+# Chapter 10
+
+Files: Chapter10_Generics.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

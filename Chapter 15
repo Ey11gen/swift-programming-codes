@@ -1,0 +1,142 @@
+// ============================================================
+// Chapter 15 — Navigation, Lists, and App Structure
+// Swift Programming Language: A Modern Guide to iOS Development
+// NOTE: Create an Xcode SwiftUI project and paste these views.
+// ============================================================
+
+import SwiftUI
+
+// MARK: - Country Model
+
+struct Country: Identifiable, Hashable {
+    let id: UUID = UUID()
+    let name: String; let capital: String; let population: Int; let flag: String
+}
+
+let sampleCountries = [
+    Country(name: "Spain",   capital: "Madrid",   population: 47_400_000,  flag: "ES"),
+    Country(name: "Japan",   capital: "Tokyo",    population: 125_700_000, flag: "JP"),
+    Country(name: "Brazil",  capital: "Brasilia", population: 215_300_000, flag: "BR"),
+    Country(name: "Nigeria", capital: "Abuja",    population: 218_500_000, flag: "NG"),
+]
+
+// MARK: - NavigationStack with value-based links
+
+struct CountryListView: View {
+    var body: some View {
+        NavigationStack {
+            List(sampleCountries) { country in
+                NavigationLink(value: country) {
+                    HStack {
+                        Text(country.name).font(.headline)
+                        Spacer()
+                        Text(country.capital).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .navigationTitle("Countries")
+            .navigationDestination(for: Country.self) { country in
+                CountryDetailView(country: country)
+            }
+        }
+    }
+}
+
+struct CountryDetailView: View {
+    let country: Country
+    var body: some View {
+        List {
+            LabeledContent("Capital",    value: country.capital)
+            LabeledContent("Population", value: country.population.formatted())
+            LabeledContent("Flag Code",  value: country.flag)
+        }
+        .navigationTitle(country.name)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Sectioned List
+
+struct SectionedListView: View {
+    var body: some View {
+        List {
+            Section("Fruits")     { Text("Apple"); Text("Banana"); Text("Cherry") }
+            Section("Vegetables") { Text("Carrot"); Text("Broccoli") }
+        }
+        .listStyle(.insetGrouped)
+    }
+}
+
+// MARK: - Swipe Actions
+
+struct SwipeActionListView: View {
+    @State private var items = ["Read emails", "Review PR", "Write tests", "Deploy"]
+    var body: some View {
+        List {
+            ForEach(items, id: \.self) { item in
+                Text(item)
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) { items.removeAll { $0 == item } }
+                            label: { Label("Delete", systemImage: "trash") }
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button { print("Starred: \(item)") }
+                            label: { Label("Star", systemImage: "star.fill") }
+                            .tint(.yellow)
+                    }
+            }
+        }
+    }
+}
+
+// MARK: - Sheet Presentation
+
+struct NoteEditorView: View {
+    @Binding var notes: String
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            TextEditor(text: $notes).padding()
+                .navigationTitle("Edit Note")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+        }
+    }
+}
+
+struct SheetExampleView: View {
+    @State private var showingSheet = false
+    @State private var notes: String = ""
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Notes: \(notes.isEmpty ? "None" : notes)").padding()
+            Button("Add Note") { showingSheet = true }.buttonStyle(.borderedProminent)
+        }
+        .sheet(isPresented: $showingSheet) {
+            NoteEditorView(notes: $notes).presentationDetents([.medium, .large])
+        }
+    }
+}
+
+// MARK: - TabView
+
+struct MainTabView: View {
+    @State private var selectedTab = 0
+    var body: some View {
+        TabView(selection: $selectedTab) {
+            CountryListView().tabItem { Label("Countries", systemImage: "globe") }.tag(0)
+            SectionedListView().tabItem { Label("Lists",     systemImage: "list.bullet") }.tag(1)
+            SheetExampleView().tabItem { Label("Notes",      systemImage: "note.text") }.tag(2)
+        }
+    }
+}
+
+#Preview { MainTabView() }
+
+# Chapter 15
+
+Files: Chapter15_NavigationAndLists.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

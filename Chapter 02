@@ -1,0 +1,161 @@
+// ============================================================
+// Chapter 02 — Variables, Constants, and Data Types
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Variables and Constants
+
+var score = 0
+var playerName = "Alex"
+var isGameOver = false
+
+score = 250
+isGameOver = true
+
+let maximumLives = 3
+let gameName = "Swift Quest"
+let speedOfLight = 299_792_458
+
+// MARK: - Type Inference and Type Annotation
+
+let cityName = "Santander"   // Swift infers String
+let altitude = 42            // Swift infers Int
+let rainfall = 12.7          // Swift infers Double
+let isCapital = false        // Swift infers Bool
+
+var temperature: Double = 22
+var age: Int = 31
+var isLoggedIn: Bool = true
+var username: String = "developer"
+
+var currentScore: Int
+var userMessage: String
+currentScore = 0
+userMessage = "Welcome back!"
+
+// MARK: - Integers and Doubles
+
+let population = 8_000_000_000
+let distance = 384_400
+let negativeValue = -273
+
+let price = 29.99
+let gravity = 9.80665
+let absoluteZero = -273.15
+
+// MARK: - Arithmetic Operators
+
+let a = 18
+let b = 5
+let sum        = a + b    // 23
+let difference = a - b    // 13
+let product    = a * b    // 90
+let quotient   = a / b    // 3
+let remainder  = a % b    // 3
+
+let intResult: Int    = 18 / 5       // 3
+let dblResult: Double = 18.0 / 5.0   // 3.6
+
+var counter = 10
+counter += 5
+counter -= 3
+counter *= 2
+counter /= 4
+counter %= 4
+
+let result1 = 2 + 3 * 4        // 14
+let result2 = (2 + 3) * 4      // 20
+let result3 = 10 - 6 / 2 + 1   // 8
+
+// MARK: - Strings and String Interpolation
+
+let bookTitle = "Swift Programming Language"
+var currentMessage = "Loading..."
+let emptyString = ""
+
+let playerName2 = "Maria"
+let score2 = 1450
+let level = 7
+let statusMessage = "Player \(playerName2) reached level \(level) with \(score2) points."
+print(statusMessage)
+
+let width = 8
+let height = 5
+let areaMessage = "A \(width) by \(height) rectangle has area \(width * height)."
+print(areaMessage)
+
+let firstName = "Ada"
+let lastName  = "Lovelace"
+let fullName  = firstName + " " + lastName
+print(fullName)
+
+// MARK: - String Properties and Methods
+
+var msg = "  Hello, Swift!  "
+print(msg.count)
+print(msg.isEmpty)
+print(msg.uppercased())
+print(msg.lowercased())
+print(msg.trimmingCharacters(in: .whitespaces))
+print(msg.contains("Swift"))
+print(msg.hasPrefix("  Hello"))
+print(msg.hasSuffix("!  "))
+print(msg.replacingOccurrences(of: "Swift", with: "World"))
+
+// Multi-line string
+let welcomeMessage = """
+    Welcome to Swift Programming.
+    This is the second line.
+    And this is the third.
+    """
+print(welcomeMessage)
+
+// MARK: - Booleans and Logical Operators
+
+let isRaining = true
+let hasUmbrella = false
+let isCold = true
+
+let needsCoat    = isRaining && isCold
+let shouldStayIn = isRaining || isCold
+let noUmbrella   = !hasUmbrella
+let willGetWet   = isRaining && !hasUmbrella
+
+let x = 10
+let y = 20
+print(x == y)
+print(x != y)
+print(x <  y)
+print(x >  y)
+print(x <= y)
+print(x >= y)
+
+// MARK: - Type Conversion
+
+let intValue: Int = 42
+let doubleFromInt = Double(intValue)
+let doubleValue: Double = 3.99
+let intFromDouble = Int(doubleValue)
+let numberAsText = String(intValue)
+
+let totalScore: Int = 375
+let numberOfTests: Int = 5
+let average = Double(totalScore) / Double(numberOfTests)
+print("Average score: \(average)")
+
+// MARK: - Type Aliases
+
+typealias PlayerScore = Int
+typealias TemperatureCelsius = Double
+typealias UserID = String
+
+var highScore: PlayerScore = 9999
+let bodyTemperature: TemperatureCelsius = 37.0
+let currentUser: UserID = "usr_4821"
+
+# Chapter 02
+
+Files: Chapter02_VariablesAndTypes.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

@@ -1,0 +1,114 @@
+// ============================================================
+// Chapter 13 — Swift Standard Library and Functional Patterns
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - String in Depth
+
+var greeting = "Hello, world!"
+print(greeting.count, greeting.first!, greeting.last!)
+
+let seventhIndex = greeting.index(greeting.startIndex, offsetBy: 7)
+print(greeting[seventhIndex])
+print(greeting[seventhIndex...])
+print(greeting.prefix(5))
+print(greeting.suffix(6))
+
+let csv = "Alice,28,Engineer,Madrid"
+let parts = csv.split(separator: ",")
+print(parts)
+let joined = parts.map { String($0) }.joined(separator: " | ")
+print(joined)
+
+let messy = "  Hello,   Swift  World!  "
+let trimmed = messy.trimmingCharacters(in: .whitespaces)
+let lettersOnly = trimmed.filter { $0.isLetter || $0.isWhitespace }
+print(lettersOnly)
+let vowelCount = trimmed.filter { "aeiouAEIOU".contains($0) }.count
+print("Vowels: \(vowelCount)")
+
+// MARK: - Dates and Foundation
+
+let now = Date()
+let tomorrow = Date(timeIntervalSinceNow: 86400)
+print(now < tomorrow)
+let elapsed: TimeInterval = tomorrow.timeIntervalSince(now)
+print("Seconds: \(elapsed)")
+print(now.formatted(date: .long, time: .shortened))
+
+let formatter = DateFormatter()
+formatter.dateFormat = "dd/MM/yyyy HH:mm"
+print(formatter.string(from: now))
+if let parsed = formatter.date(from: "15/07/2024 09:30") { print("Parsed: \(parsed)") }
+
+var components = DateComponents()
+components.year = 2026; components.month = 12; components.day = 25
+let calendar = Calendar.current
+let christmas = calendar.date(from: components)!
+print(christmas.formatted(date: .abbreviated, time: .omitted))
+
+// MARK: - Codable
+
+struct User: Codable {
+    var id: Int; var name: String; var email: String; var isPremium: Bool
+}
+let user = User(id: 1, name: "Leila Nasser", email: "leila@example.com", isPremium: true)
+do {
+    let encoder = JSONEncoder(); encoder.outputFormatting = .prettyPrinted
+    let data = try encoder.encode(user)
+    print(String(data: data, encoding: .utf8)!)
+    let decoded = try JSONDecoder().decode(User.self, from: data)
+    print("Decoded: \(decoded.name)")
+} catch { print("Error: \(error)") }
+
+// CodingKeys for snake_case mapping
+struct Article: Codable {
+    var articleID: Int; var publishedAt: String; var wordCount: Int
+    enum CodingKeys: String, CodingKey {
+        case articleID = "article_id"; case publishedAt = "published_at"; case wordCount = "word_count"
+    }
+}
+let json = """{"article_id":42,"published_at":"2026-03-01","word_count":1800}"""
+if let data = json.data(using: .utf8),
+   let article = try? JSONDecoder().decode(Article.self, from: data) {
+    print("Article \(article.articleID): \(article.wordCount) words")
+}
+
+// MARK: - Lazy Sequences
+
+let numbers = Array(1...1_000_000)
+let lazyResult = numbers.lazy.map { $0 * 2 }.filter { $0 > 1000 }.prefix(5)
+print(Array(lazyResult))
+
+// MARK: - Custom Operators
+
+infix operator **: MultiplicationPrecedence
+func ** (base: Double, exponent: Double) -> Double { pow(base, exponent) }
+print(2.0 ** 10.0)
+print(3.0 ** 3.0)
+
+// MARK: - Result Builder (simplified demo)
+
+@resultBuilder
+struct HTMLBuilder {
+    static func buildBlock(_ parts: String...) -> String { parts.joined(separator: "\n") }
+    static func buildOptional(_ c: String?) -> String { c ?? "" }
+    static func buildEither(first c: String) -> String { c }
+    static func buildEither(second c: String) -> String { c }
+}
+func html(@HTMLBuilder content: () -> String) -> String { "<html>\n\(content())\n</html>" }
+let showTitle = true
+let page = html {
+    "<body>"
+    if showTitle { "  <h1>Hello from Swift</h1>" }
+    "  <p>Built with a result builder.</p>"
+    "</body>"
+}
+print(page)
+
+# Chapter 13
+
+Files: Chapter13_StandardLibrary.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

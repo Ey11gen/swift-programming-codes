@@ -1,0 +1,189 @@
+// ============================================================
+// Chapter 03 — Control Flow: Conditions, Loops, and Pattern Matching
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - if, else if, else
+
+let temperature = 35
+if temperature > 30 {
+    print("It is a hot day. Stay hydrated.")
+}
+
+let hour = 20
+if hour < 12 {
+    print("Good morning.")
+} else {
+    print("Good afternoon or evening.")
+}
+
+let score = 74
+if score >= 90 {
+    print("Grade: A")
+} else if score >= 80 {
+    print("Grade: B")
+} else if score >= 70 {
+    print("Grade: C")
+} else if score >= 60 {
+    print("Grade: D")
+} else {
+    print("Grade: F")
+}
+
+// MARK: - Ternary Operator
+
+let userAge = 20
+let access = userAge >= 18 ? "Allowed" : "Denied"
+print(access)
+
+let temperature2 = 15
+let recommendation = temperature2 > 20 ? "Wear a t-shirt." : "Wear a jacket."
+print(recommendation)
+
+// MARK: - guard Statement
+
+func processUserAge(_ age: Int) {
+    guard age >= 0 else {
+        print("Age cannot be negative.")
+        return
+    }
+    guard age <= 130 else {
+        print("Age \(age) is not plausible.")
+        return
+    }
+    print("Processing user with age \(age).")
+}
+
+processUserAge(25)
+processUserAge(-5)
+processUserAge(200)
+
+func greetUser(name: String?) {
+    guard let unwrappedName = name else {
+        print("No name was provided.")
+        return
+    }
+    print("Hello, \(unwrappedName)!")
+}
+
+greetUser(name: "Sofia")
+greetUser(name: nil)
+
+// MARK: - switch Statement
+
+let dayNumber = 3
+switch dayNumber {
+case 1: print("Monday")
+case 2: print("Tuesday")
+case 3: print("Wednesday")
+case 4: print("Thursday")
+case 5: print("Friday")
+case 6, 7: print("Weekend")
+default: print("Invalid day number")
+}
+
+let examScore = 83
+switch examScore {
+case 90...100: print("Grade: A")
+case 80..<90:  print("Grade: B")
+case 70..<80:  print("Grade: C")
+case 60..<70:  print("Grade: D")
+case 0..<60:   print("Grade: F")
+default:       print("Score out of valid range")
+}
+
+let point = (2, 0)
+switch point {
+case (0, 0):        print("At the origin")
+case (let x, 0):    print("On the x-axis at x = \(x)")
+case (0, let y):    print("On the y-axis at y = \(y)")
+case (let x, let y) where x == y: print("On the diagonal: \(x), \(y)")
+case (let x, let y): print("Somewhere in the grid: \(x), \(y)")
+}
+
+// MARK: - for-in Loops
+
+let languages = ["Swift", "Python", "Rust", "Go"]
+for language in languages {
+    print("Language: \(language)")
+}
+
+let cities = ["Madrid", "Tokyo", "Lagos", "Sydney"]
+for (index, city) in cities.enumerated() {
+    print("\(index + 1). \(city)")
+}
+
+for i in 1...5 {
+    print("Iteration \(i)")
+}
+
+for i in 0..<10 {
+    print(i * i)
+}
+
+var total = 0
+for _ in 1...100 {
+    total += 1
+}
+print(total)
+
+for value in stride(from: 0, to: 20, by: 4) {
+    print(value)
+}
+
+for value in stride(from: 10, through: 0, by: -2) {
+    print(value)
+}
+
+// MARK: - while and repeat-while
+
+var countdown = 5
+while countdown > 0 {
+    print("T-minus \(countdown)...")
+    countdown -= 1
+}
+print("Liftoff!")
+
+var attempts = 0
+var connectionEstablished = false
+repeat {
+    print("Attempting connection... (attempt \(attempts + 1))")
+    attempts += 1
+    if attempts == 3 { connectionEstablished = true }
+} while !connectionEstablished
+print("Connected after \(attempts) attempts.")
+
+// MARK: - break and continue
+
+let numbers = [14, 7, 31, 9, 22, 45, 3]
+let target = 22
+var found = false
+for number in numbers {
+    if number == target { found = true; break }
+}
+print(found ? "Found \(target)." : "\(target) not found.")
+
+for number in 1...10 {
+    if number % 2 == 0 { continue }
+    print(number)
+}
+
+// MARK: - Labeled Statements
+
+searchLoop: for row in 1...4 {
+    for column in 1...4 {
+        if row == 2 && column == 3 {
+            print("Target at row \(row), column \(column). Stopping.")
+            break searchLoop
+        }
+        print("Checking row \(row), column \(column)")
+    }
+}
+print("Search complete.")
+
+# Chapter 03
+
+Files: Chapter03_ControlFlow.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

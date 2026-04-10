@@ -1,0 +1,138 @@
+// ============================================================
+// Chapter 18 — Data Persistence: SwiftData and Core Data
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+import SwiftUI
+import SwiftData
+
+// MARK: - UserDefaults
+
+let defaults = UserDefaults.standard
+defaults.set("Leila",  forKey: "username")
+defaults.set(24,       forKey: "preferredFontSize")
+defaults.set(true,     forKey: "darkModeEnabled")
+defaults.set(["Swift", "SwiftUI"], forKey: "recentSearches")
+
+let username  = defaults.string(forKey: "username") ?? "Guest"
+let fontSize  = defaults.integer(forKey: "preferredFontSize")
+let darkMode  = defaults.bool(forKey: "darkModeEnabled")
+print("User: \(username), font: \(fontSize), dark: \(darkMode)")
+
+// Codable struct in UserDefaults
+struct AppConfiguration: Codable { var theme: String; var language: String; var itemsPerPage: Int }
+let config = AppConfiguration(theme: "dark", language: "es", itemsPerPage: 20)
+if let encoded = try? JSONEncoder().encode(config) { defaults.set(encoded, forKey: "appConfig") }
+if let saved = defaults.data(forKey: "appConfig"),
+   let decoded = try? JSONDecoder().decode(AppConfiguration.self, from: saved) {
+    print("Theme: \(decoded.theme), Language: \(decoded.language)")
+}
+
+// @AppStorage example (use inside a SwiftUI view)
+struct AppStorageExampleView: View {
+    @AppStorage("username")          private var storedUsername: String = "Guest"
+    @AppStorage("darkModeEnabled")   private var darkModeOn:     Bool   = false
+    @AppStorage("preferredFontSize") private var storedFontSize: Double = 16.0
+    var body: some View {
+        Form {
+            TextField("Username", text: $storedUsername)
+            Toggle("Dark Mode", isOn: $darkModeOn)
+            Slider(value: $storedFontSize, in: 12...24, step: 1) {
+                Text("Font Size: \(Int(storedFontSize))pt")
+            }
+            Text("Hello, \(storedUsername)!").font(.system(size: storedFontSize))
+        }
+    }
+}
+
+// MARK: - File System
+
+let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+let fileURL = documents.appendingPathComponent("notes.txt")
+let content = "This is my first saved note.\nSwift file system access is straightforward."
+do {
+    try content.write(to: fileURL, atomically: true, encoding: .utf8)
+    let readBack = try String(contentsOf: fileURL, encoding: .utf8)
+    print("Read: \(readBack)")
+} catch { print("File error: \(error)") }
+
+// MARK: - SwiftData Models
+
+@Model
+class JournalEntry {
+    var title:      String
+    var body:       String
+    var createdAt:  Date
+    var isFavorite: Bool
+    var tags:       [String]
+
+    init(title: String, body: String, tags: [String] = []) {
+        self.title = title; self.body = body
+        self.createdAt = Date(); self.isFavorite = false; self.tags = tags
+    }
+}
+
+// App entry point — paste into your @main App struct:
+// .modelContainer(for: JournalEntry.self)
+
+struct JournalListView: View {
+    @Query(sort: \JournalEntry.createdAt, order: .reverse) private var entries: [JournalEntry]
+    @Environment(\.modelContext) private var context
+    @State private var showingNewEntry = false
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(entries) { entry in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(entry.title).font(.headline)
+                            if entry.isFavorite {
+                                Image(systemName: "star.fill").foregroundStyle(.yellow).font(.caption)
+                            }
+                        }
+                        Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .onDelete { offsets in offsets.forEach { context.delete(entries[$0]) } }
+            }
+            .navigationTitle("Journal")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New Entry", systemImage: "plus") { showingNewEntry = true }
+                }
+            }
+            .sheet(isPresented: $showingNewEntry) { NewEntryView() }
+        }
+    }
+}
+
+struct NewEntryView: View {
+    @Environment(\.modelContext) private var context
+    @Environment(\.dismiss)      private var dismiss
+    @State private var title = ""
+    @State private var bodyText = ""
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Title")   { TextField("Entry title", text: $title) }
+                Section("Content") { TextEditor(text: $bodyText).frame(minHeight: 150) }
+            }
+            .navigationTitle("New Entry").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { context.insert(JournalEntry(title: title, body: bodyText)); dismiss() }
+                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+# Chapter 18
+
+Files: Chapter18_Persistence.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

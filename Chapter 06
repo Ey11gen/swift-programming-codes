@@ -1,0 +1,122 @@
+// ============================================================
+// Chapter 06 — Structs and Classes
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Structs
+
+struct Point { var x: Double; var y: Double }
+var position = Point(x: 3.5, y: -2.0)
+position.x = 7.0
+print(position)
+
+struct Circle {
+    var radius: Double
+    var diameter: Double {
+        get { radius * 2 }
+        set(d) { radius = d / 2 }
+    }
+    var area: Double { Double.pi * radius * radius }
+}
+var circle = Circle(radius: 5.0)
+print(circle.diameter, circle.area)
+circle.diameter = 20.0
+print(circle.radius)
+
+struct Thermometer {
+    var temperature: Double {
+        didSet {
+            if temperature < -273.15 { temperature = -273.15; print("Reset to absolute zero.") }
+        }
+    }
+}
+var t = Thermometer(temperature: 20.0)
+t.temperature = -300.0
+
+// MARK: - Methods and mutating
+
+struct Rectangle {
+    var width: Double; var height: Double
+    func area() -> Double { width * height }
+    func perimeter() -> Double { 2 * (width + height) }
+    func isSquare() -> Bool { width == height }
+}
+let rect = Rectangle(width: 8.0, height: 5.0)
+print(rect.area(), rect.perimeter(), rect.isSquare())
+
+struct Counter {
+    var count: Int = 0
+    var step: Int = 1
+    mutating func increment() { count += step }
+    mutating func reset()     { count = 0 }
+}
+var counter = Counter()
+counter.increment(); counter.increment()
+print(counter.count)
+
+// MARK: - Static Members
+
+struct MathConstants {
+    static let pi = 3.14159265358979
+    static func circleArea(radius: Double) -> Double { pi * radius * radius }
+}
+print(MathConstants.pi)
+print(MathConstants.circleArea(radius: 4))
+
+// MARK: - Custom Initializers
+
+struct Temperature {
+    var celsius: Double
+    init(celsius: Double)    { self.celsius = celsius }
+    init(fahrenheit: Double) { self.celsius = (fahrenheit - 32) * 5 / 9 }
+    init(kelvin: Double)     { self.celsius = kelvin - 273.15 }
+    var fahrenheit: Double   { celsius * 9 / 5 + 32 }
+}
+let boiling  = Temperature(celsius: 100)
+let bodyTemp = Temperature(fahrenheit: 98.6)
+print(boiling.fahrenheit, bodyTemp.celsius)
+
+// MARK: - Classes and Reference Semantics
+
+class BankAccount {
+    var owner: String; var balance: Double
+    init(owner: String, balance: Double) { self.owner = owner; self.balance = balance }
+    func deposit(_ amount: Double)  { balance += amount }
+    func withdraw(_ amount: Double) { balance -= amount }
+}
+let account1 = BankAccount(owner: "Alice", balance: 1000.0)
+let account2 = account1
+account2.deposit(500.0)
+print(account1.balance) // 1500.0 — shared reference
+
+// MARK: - Inheritance
+
+class Vehicle {
+    var brand: String; var speed: Double
+    init(brand: String, speed: Double) { self.brand = brand; self.speed = speed }
+    func describe() { print("\(brand) at \(speed) km/h") }
+}
+class Car: Vehicle {
+    var doors: Int
+    init(brand: String, speed: Double, doors: Int) {
+        self.doors = doors; super.init(brand: brand, speed: speed)
+    }
+    override func describe() { super.describe(); print("\(doors) doors.") }
+}
+let tesla = Car(brand: "Tesla", speed: 250, doors: 4)
+tesla.describe()
+
+// MARK: - Value vs Reference Comparison
+
+struct Player { var name: String; var level: Int }
+var original = Player(name: "Hero", level: 10)
+var backup   = original
+backup.level = 99
+print(original.level, backup.level) // 10 99 — independent copies
+
+# Chapter 06
+
+Files: Chapter06_StructsAndClasses.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

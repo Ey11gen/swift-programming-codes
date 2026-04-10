@@ -1,0 +1,106 @@
+// ============================================================
+// Chapter 09 — Optionals and Error Handling
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Optionals
+
+var maybeAnInt: Int? = 42
+var definitelyNil: Int? = nil
+print(maybeAnInt, definitelyNil)
+
+// MARK: - Optional Binding
+
+let possibleName: String? = "Alex"
+if let name = possibleName { print("Hello, \(name)!") }
+else { print("No name provided.") }
+
+let firstName: String? = "Maria"
+let age: Int? = 28
+if let first = firstName, let years = age, years >= 18 {
+    print("\(first) is an adult.")
+}
+
+// Swift 5.7 shorthand
+let username: String? = "swift_learner"
+if let username { print("User: \(username)") }
+
+// MARK: - guard let
+
+func displayProfile(name: String?, score: Int?) {
+    guard let name = name else { print("Name required."); return }
+    guard let score = score, score >= 0 else { print("Valid score required."); return }
+    print("\(name) scored \(score) points.")
+}
+displayProfile(name: "Zara", score: 95)
+displayProfile(name: nil,    score: 88)
+
+// MARK: - Nil Coalescing
+
+let storedName: String? = nil
+let displayName = storedName ?? "Anonymous"
+print(displayName)
+
+let primary: String? = nil
+let tertiary: String? = "Fallback"
+print(primary ?? tertiary ?? "Ultimate default")
+
+// MARK: - Optional Chaining
+
+struct Address { var city: String; var postalCode: String? }
+struct Person  { var name: String; var address: Address? }
+
+let person1 = Person(name: "Carlos", address: Address(city: "Madrid", postalCode: "28001"))
+let person2 = Person(name: "Yuki", address: nil)
+print(person1.address?.postalCode ?? "No code")
+print(person2.address?.postalCode ?? "No address")
+
+// MARK: - Error Handling
+
+enum ValidationError: Error {
+    case emptyField(fieldName: String)
+    case tooShort(fieldName: String, minimum: Int, actual: Int)
+    case invalidFormat(fieldName: String, expected: String)
+}
+
+func validateUsername(_ input: String) throws -> String {
+    let trimmed = input.trimmingCharacters(in: .whitespaces)
+    if trimmed.isEmpty { throw ValidationError.emptyField(fieldName: "username") }
+    if trimmed.count < 4 { throw ValidationError.tooShort(fieldName: "username", minimum: 4, actual: trimmed.count) }
+    return trimmed
+}
+
+do {
+    let name = try validateUsername("sw")
+    print("Valid: \(name)")
+} catch ValidationError.tooShort(let field, let min, let actual) {
+    print("\(field) must be at least \(min) characters. You entered \(actual).")
+} catch { print("Error: \(error)") }
+
+let result1 = try? validateUsername("good_name")
+let result2 = try? validateUsername("")
+print(result1, result2)
+
+// MARK: - Result Type
+
+func parseAge(from text: String) -> Result<Int, ValidationError> {
+    guard !text.isEmpty else { return .failure(.emptyField(fieldName: "age")) }
+    guard let age = Int(text) else { return .failure(.invalidFormat(fieldName: "age", expected: "integer")) }
+    guard age >= 0 && age <= 130 else { return .failure(.emptyField(fieldName: "age")) }
+    return .success(age)
+}
+let outcome1 = parseAge(from: "25")
+let outcome2 = parseAge(from: "abc")
+for outcome in [outcome1, outcome2] {
+    switch outcome {
+    case .success(let a): print("Valid age: \(a)")
+    case .failure(let e): print("Failed: \(e)")
+    }
+}
+
+# Chapter 09
+
+Files: Chapter09_OptionalsAndErrorHandling.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

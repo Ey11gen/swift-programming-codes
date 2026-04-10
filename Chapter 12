@@ -1,0 +1,111 @@
+// ============================================================
+// Chapter 12 — Concurrency: Async/Await, Tasks, and Actors
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Async Functions
+
+func fetchWeather(for city: String) async -> String {
+    try? await Task.sleep(nanoseconds: 500_000_000)
+    return "Sunny, 24 degrees in \(city)"
+}
+
+func fetchPopulation(of city: String) async throws -> Int {
+    if city.isEmpty { throw URLError(.badURL) }
+    try? await Task.sleep(nanoseconds: 300_000_000)
+    return 650_000
+}
+
+// MARK: - Sequential Awaits
+
+Task {
+    let weather = await fetchWeather(for: "Santander")
+    print(weather)
+    let pop = try? await fetchPopulation(of: "Madrid")
+    print("Population: \(pop ?? 0)")
+}
+
+// MARK: - Parallel with async let
+
+Task {
+    async let w1 = fetchWeather(for: "Madrid")
+    async let w2 = fetchWeather(for: "Tokyo")
+    async let w3 = fetchWeather(for: "Sydney")
+    let results = await (w1, w2, w3)
+    print(results.0, results.1, results.2)
+}
+
+// MARK: - TaskGroup
+
+func fetchWeatherForCities(_ cities: [String]) async -> [String: String] {
+    var results: [String: String] = [:]
+    await withTaskGroup(of: (String, String).self) { group in
+        for city in cities {
+            group.addTask { (city, await fetchWeather(for: city)) }
+        }
+        for await (city, weather) in group {
+            results[city] = weather
+        }
+    }
+    return results
+}
+Task {
+    let weather = await fetchWeatherForCities(["Madrid", "Tokyo", "Lagos"])
+    for (city, report) in weather.sorted(by: { $0.key < $1.key }) {
+        print("\(city): \(report)")
+    }
+}
+
+// MARK: - Actor
+
+actor ScoreBoard {
+    private var scores: [String: Int] = [:]
+    func addScore(for player: String, points: Int) {
+        scores[player] = (scores[player] ?? 0) + points
+    }
+    func topPlayer() -> String? {
+        scores.max(by: { $0.value < $1.value })?.key
+    }
+}
+let board = ScoreBoard()
+Task {
+    await board.addScore(for: "Alice", points: 50)
+    await board.addScore(for: "Bob",   points: 75)
+    await board.addScore(for: "Alice", points: 30)
+    let leader = await board.topPlayer()
+    print("Leader: \(leader ?? "None")")
+}
+
+// MARK: - Task Cancellation
+
+func processItems(items: [Int]) async throws -> [Int] {
+    var results: [Int] = []
+    for item in items {
+        try Task.checkCancellation()
+        try await Task.sleep(nanoseconds: 50_000_000)
+        results.append(item * 2)
+    }
+    return results
+}
+let task = Task {
+    do {
+        let processed = try await processItems(items: Array(1...50))
+        print("Processed \(processed.count) items")
+    } catch is CancellationError {
+        print("Task was cancelled.")
+    } catch { print("Error: \(error)") }
+}
+Task {
+    try? await Task.sleep(nanoseconds: 300_000_000)
+    task.cancel()
+}
+
+// Avoid blocking the playground — keep alive briefly
+Thread.sleep(forTimeInterval: 3)
+
+# Chapter 12
+
+Files: Chapter12_Concurrency.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

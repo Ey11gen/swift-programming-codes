@@ -1,0 +1,180 @@
+// ============================================================
+// Chapter 19 — App Architecture: MVVM, Clean Architecture, and Testing
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import SwiftUI
+import Observation
+import XCTest
+
+// MARK: - Model
+
+struct Article: Identifiable, Codable {
+    let id: Int; let title: String; let body: String; let userId: Int
+}
+
+// MARK: - Service
+
+enum ArticleService {
+    static func fetch() async throws -> [Article] {
+        guard let url = URL(string: "https://jsonplaceholder.typicode.com/posts") else {
+            throw URLError(.badURL)
+        }
+        let (data, _) = try await URLSession.shared.data(from: url)
+        return try JSONDecoder().decode([Article].self, from: data)
+    }
+}
+
+// MARK: - ViewModel (MVVM)
+
+@Observable @MainActor
+class ArticleListViewModel {
+    var articles:     [Article] = []
+    var isLoading:    Bool = false
+    var errorMessage: String? = nil
+    var searchText:   String = ""
+
+    var filteredArticles: [Article] {
+        searchText.isEmpty ? articles : articles.filter {
+            $0.title.localizedCaseInsensitiveContains(searchText) ||
+            $0.body.localizedCaseInsensitiveContains(searchText)
+        }
+    }
+    var articleCount: String {
+        "\(filteredArticles.count) article\(filteredArticles.count == 1 ? "" : "s")"
+    }
+
+    private let fetchFn: () async throws -> [Article]
+    init(fetchFn: @escaping () async throws -> [Article] = ArticleService.fetch) {
+        self.fetchFn = fetchFn
+    }
+    func loadArticles() async {
+        isLoading = true; errorMessage = nil
+        do    { articles = try await fetchFn() }
+        catch { errorMessage = error.localizedDescription }
+        isLoading = false
+    }
+    func deleteArticle(at offsets: IndexSet) {
+        let ids = offsets.map { filteredArticles[$0].id }
+        articles.removeAll { ids.contains($0.id) }
+    }
+}
+
+// MARK: - View
+
+struct ArticleListView: View {
+    @State private var viewModel = ArticleListViewModel()
+    var body: some View {
+        NavigationStack {
+            Group {
+                if viewModel.isLoading { ProgressView("Loading...") }
+                else if let error = viewModel.errorMessage {
+                    VStack { Text("Error").font(.headline); Text(error) }
+                } else {
+                    List {
+                        ForEach(viewModel.filteredArticles) { article in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(article.title).font(.headline).lineLimit(2)
+                                Text(article.body).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            }
+                        }
+                        .onDelete(perform: viewModel.deleteArticle)
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("Articles")
+            .searchable(text: $viewModel.searchText)
+            .task { await viewModel.loadArticles() }
+        }
+    }
+}
+
+// MARK: - Clean Architecture: Domain Layer
+
+struct Note {
+    let id: UUID; var title: String; var content: String; var createdAt: Date
+    var isValid: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
+}
+protocol CreateNoteUseCase { func execute(title: String, content: String) throws -> Note }
+struct CreateNoteInteractor: CreateNoteUseCase {
+    enum Error: Swift.Error { case emptyTitle }
+    func execute(title: String, content: String) throws -> Note {
+        let t = title.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { throw Error.emptyTitle }
+        return Note(id: UUID(), title: t, content: content, createdAt: Date())
+    }
+}
+protocol NoteRepository { func save(_ note: Note) throws; func fetchAll() -> [Note]; func delete(id: UUID) throws }
+class InMemoryNoteRepository: NoteRepository {
+    private var store: [UUID: Note] = [:]
+    func save(_ note: Note) throws { store[note.id] = note }
+    func fetchAll() -> [Note]      { store.values.sorted { $0.createdAt > $1.createdAt } }
+    func delete(id: UUID) throws   { store.removeValue(forKey: id) }
+}
+
+// MARK: - Unit Tests
+
+final class ArticleListViewModelTests: XCTestCase {
+    func makeVM(articles: [Article] = []) -> ArticleListViewModel {
+        ArticleListViewModel { articles }
+    }
+
+    @MainActor func testLoadArticlesPopulatesArray() async {
+        let mocks = [
+            Article(id: 1, title: "First",  body: "Body 1", userId: 1),
+            Article(id: 2, title: "Second", body: "Body 2", userId: 1),
+        ]
+        let vm = makeVM(articles: mocks)
+        await vm.loadArticles()
+        XCTAssertEqual(vm.articles.count, 2)
+        XCTAssertFalse(vm.isLoading)
+        XCTAssertNil(vm.errorMessage)
+    }
+
+    @MainActor func testSearchFilteringWorks() async {
+        let mocks = [
+            Article(id: 1, title: "Swift Basics",    body: "Learn Swift",  userId: 1),
+            Article(id: 2, title: "Python Guide",    body: "Learn Python", userId: 1),
+        ]
+        let vm = makeVM(articles: mocks)
+        await vm.loadArticles()
+        vm.searchText = "Swift"
+        XCTAssertEqual(vm.filteredArticles.count, 1)
+        vm.searchText = ""
+        XCTAssertEqual(vm.filteredArticles.count, 2)
+    }
+
+    @MainActor func testNetworkErrorSetsErrorMessage() async {
+        let vm = ArticleListViewModel { throw URLError(.notConnectedToInternet) }
+        await vm.loadArticles()
+        XCTAssertTrue(vm.articles.isEmpty)
+        XCTAssertNotNil(vm.errorMessage)
+    }
+
+    @MainActor func testArticleCountGrammar() async {
+        let vm = makeVM(articles: [Article(id: 1, title: "T", body: "B", userId: 1)])
+        await vm.loadArticles()
+        XCTAssertEqual(vm.articleCount, "1 article")
+    }
+}
+
+final class NoteViewModelTests: XCTestCase {
+    @MainActor func testAddValidNote() throws {
+        let repo = InMemoryNoteRepository()
+        let note = try CreateNoteInteractor().execute(title: "Test", content: "Content")
+        try repo.save(note)
+        XCTAssertEqual(repo.fetchAll().count, 1)
+        XCTAssertEqual(repo.fetchAll()[0].title, "Test")
+    }
+    @MainActor func testEmptyTitleThrows() {
+        XCTAssertThrowsError(try CreateNoteInteractor().execute(title: "  ", content: ""))
+    }
+}
+
+#Preview { ArticleListView() }
+
+# Chapter 19
+
+Files: Chapter19_ArchitectureAndTesting.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

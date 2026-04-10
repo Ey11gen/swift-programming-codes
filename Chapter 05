@@ -1,0 +1,98 @@
+// ============================================================
+// Chapter 05 — Collections: Arrays, Dictionaries, and Sets
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Arrays
+
+let planets = ["Mercury", "Venus", "Earth", "Mars"]
+var scores = [88, 92, 75, 96, 61]
+
+print(planets[0], planets[2])
+print(scores.count, scores.isEmpty, scores.first!, scores.last!)
+
+var fruits = ["apple", "banana", "cherry"]
+fruits.append("yellow")
+fruits.insert("orange", at: 1)
+let removed = fruits.remove(at: 0)
+fruits[0] = "purple"
+print(fruits)
+
+let temperatures = [18.5, 22.0, 19.8, 25.3, 21.1]
+for (i, t) in temperatures.enumerated() { print("Day \(i+1): \(t)") }
+
+// MARK: - Dictionaries
+
+var countryCapitals: [String: String] = [
+    "France": "Paris", "Japan": "Tokyo", "Brazil": "Brasilia"
+]
+
+if let capital = countryCapitals["Japan"] { print("Capital: \(capital)") }
+print(countryCapitals["Italy"] ?? "Not found")
+
+countryCapitals["Germany"] = "Berlin"
+countryCapitals["France"] = "Paris (updated)"
+countryCapitals["Japan"] = nil
+print(countryCapitals)
+
+for (country, capital) in countryCapitals { print("\(country): \(capital)") }
+
+// MARK: - Sets
+
+var uniqueColors: Set<String> = ["red", "green", "blue"]
+uniqueColors.insert("red")
+print(uniqueColors.count)
+
+let setA: Set<Int> = [1, 2, 3, 4, 5]
+let setB: Set<Int> = [3, 4, 5, 6, 7]
+print(setA.union(setB))
+print(setA.intersection(setB))
+print(setA.subtracting(setB))
+print(setA.symmetricDifference(setB))
+print(setA.isSubset(of: setA.union(setB)))
+
+// MARK: - Higher-Order Functions
+
+let prices = [10.0, 25.0, 5.0, 40.0, 15.0]
+let discounted = prices.map { $0 * 0.9 }
+print(discounted)
+
+let nameList = ["alice", "bob", "charlie"]
+let capitalized = nameList.map { $0.capitalized }
+print(capitalized)
+
+let examScores = [55, 88, 42, 96, 73, 61, 80]
+let passing = examScores.filter { $0 >= 70 }
+print(passing)
+
+let dailySales = [120.0, 95.5, 210.0, 87.0, 155.5]
+let totalSales = dailySales.reduce(0) { $0 + $1 }
+print("Total: \(totalSales)")
+
+let ascending  = examScores.sorted()
+let descending = examScores.sorted(by: >)
+let people     = ["Zara", "Alice", "Miguel", "Bo"]
+let byLength   = people.sorted { $0.count < $1.count }
+print(ascending, descending, byLength)
+
+let rawInput = ["42", "hello", "100", "3.14", "7"]
+let validInts = rawInput.compactMap { Int($0) }
+print(validInts)
+
+let chained = examScores.filter { $0 >= 80 }.map { "Score: \($0)" }
+print(chained)
+
+// MARK: - Combining Collections
+
+let users: [[String: String]] = [
+    ["name": "Alice", "role": "admin"],
+    ["name": "Bob",   "role": "editor"]
+]
+for user in users { print("\(user["name"] ?? "Unknown") — \(user["role"] ?? "none")") }
+
+# Chapter 05
+
+Files: Chapter05_Collections.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

@@ -1,0 +1,125 @@
+// ============================================================
+// Chapter 04 — Functions and Closures
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Basic Functions
+
+func printWelcome() {
+    print("Welcome to Swift Programming!")
+    print("Let us get started.")
+}
+printWelcome()
+
+func greetPerson(name: String) {
+    print("Hello, \(name)! Welcome aboard.")
+}
+greetPerson(name: "Carlos")
+
+func add(_ a: Int, _ b: Int) -> Int { return a + b }
+func square(_ number: Int) -> Int { number * number }
+func isEven(_ number: Int) -> Bool { number % 2 == 0 }
+print(add(10, 25))
+print(square(7))
+print(isEven(14))
+
+// MARK: - Parameter Labels and Default Values
+
+func sendMessage(to recipient: String, body message: String) {
+    print("Sending to \(recipient): \(message)")
+}
+sendMessage(to: "Alice", body: "Are we still on for Thursday?")
+
+func multiply(_ a: Int, by b: Int) -> Int { return a * b }
+print(multiply(6, by: 7))
+
+func connectToServer(host: String, port: Int = 8080, useSSL: Bool = true) {
+    print("Connecting to \(host) on port \(port). SSL: \(useSSL)")
+}
+connectToServer(host: "api.example.com")
+connectToServer(host: "api.example.com", port: 443)
+
+// MARK: - Variadic Parameters
+
+func calculateAverage(_ numbers: Double...) -> Double {
+    guard !numbers.isEmpty else { return 0 }
+    var total = 0.0
+    for number in numbers { total += number }
+    return total / Double(numbers.count)
+}
+print(calculateAverage(80, 90, 75, 88, 92))
+
+// MARK: - inout Parameters
+
+func doubleValue(_ value: inout Int) { value = value * 2 }
+var myNumber = 8
+doubleValue(&myNumber)
+print(myNumber)
+
+func swapValues(_ a: inout Int, _ b: inout Int) {
+    let temp = a; a = b; b = temp
+}
+var x = 100, y = 200
+swapValues(&x, &y)
+print("x: \(x), y: \(y)")
+
+// MARK: - Functions as First-Class Values
+
+var operation: (Int, Int) -> Int
+operation = add
+print(operation(5, 3))
+operation = multiply
+print(operation(5, 3))
+
+func applyOperation(_ a: Int, _ b: Int, using op: (Int, Int) -> Int) -> Int { op(a, b) }
+func subtract(_ a: Int, _ b: Int) -> Int { a - b }
+print(applyOperation(20, 8, using: add))
+print(applyOperation(20, 8, using: subtract))
+
+// MARK: - Closures
+
+let squareClosure: (Int) -> Int = { n in return n * n }
+let squareShorter: (Int) -> Int = { $0 * $0 }
+let addTwo: (Int, Int) -> Int = { $0 + $1 }
+print(squareClosure(9))
+print(squareShorter(7))
+print(addTwo(14, 6))
+
+// Value capturing closure
+func makeCounter() -> () -> Int {
+    var count = 0
+    return { count += 1; return count }
+}
+let counter = makeCounter()
+print(counter(), counter(), counter())
+
+// MARK: - Trailing Closures
+
+func performTask(named label: String, task: () -> Void) {
+    print("Starting: \(label)")
+    task()
+    print("Done: \(label)")
+}
+performTask(named: "Build") { print("Building...") }
+
+let names = ["Zara", "Alice", "Miguel", "Bo"]
+let sorted     = names.sorted { $0 < $1 }
+let byLength   = names.sorted { $0.count < $1.count }
+let longNames  = names.filter { $0.count > 4 }
+print(sorted, byLength, longNames)
+
+// Completion handler pattern
+func downloadData(from url: String, completion: (String) -> Void) {
+    print("Downloading from \(url)...")
+    completion("Response: 200 OK")
+}
+downloadData(from: "https://api.example.com/data") { result in
+    print("Result: \(result)")
+}
+
+# Chapter 04
+
+Files: Chapter04_FunctionsAndClosures.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

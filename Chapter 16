@@ -1,0 +1,116 @@
+// ============================================================
+// Chapter 16 — Data Flow and State Management
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import SwiftUI
+import Observation
+
+// MARK: - @Observable
+
+@Observable
+class UserSession {
+    var username: String = ""
+    var isLoggedIn: Bool = false
+    var notificationCount: Int = 0
+
+    func login(as name: String) {
+        username = name; isLoggedIn = true; notificationCount = 3
+    }
+    func logout() { username = ""; isLoggedIn = false; notificationCount = 0 }
+}
+
+struct HeaderView: View {
+    let session: UserSession
+    var body: some View {
+        HStack {
+            if session.isLoggedIn { Text("Welcome, \(session.username)").font(.headline) }
+            else { Text("Not signed in").foregroundStyle(.secondary) }
+            Spacer()
+        }
+        .padding()
+    }
+}
+
+struct SessionDemoView: View {
+    @State private var session = UserSession()
+    var body: some View {
+        VStack(spacing: 20) {
+            HeaderView(session: session)
+            if !session.isLoggedIn {
+                Button("Log In") { session.login(as: "Leila") }.buttonStyle(.borderedProminent)
+            } else {
+                Button("Log Out") { session.logout() }.foregroundStyle(.red)
+            }
+        }
+        .padding()
+    }
+}
+
+// MARK: - Custom Environment Value
+
+struct AppThemeKey: EnvironmentKey { static let defaultValue: String = "standard" }
+extension EnvironmentValues {
+    var appTheme: String { get { self[AppThemeKey.self] } set { self[AppThemeKey.self] = newValue } }
+}
+
+struct ThemedButton: View {
+    @Environment(\.appTheme) private var theme
+    let title: String; let action: () -> Void
+    var body: some View {
+        Button(title, action: action)
+            .buttonStyle(.borderedProminent)
+            .tint(theme == "dark" ? .purple : .blue)
+    }
+}
+
+struct CustomEnvironmentDemo: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            ThemedButton(title: "Default theme") {}
+            VStack {
+                ThemedButton(title: "Dark theme button") {}
+                ThemedButton(title: "Another dark button") {}
+            }
+            .environment(\.appTheme, "dark")
+        }
+        .padding()
+    }
+}
+
+// MARK: - @Binding example
+
+struct SearchBarView: View {
+    @Binding var text: String
+    var body: some View {
+        TextField("Search...", text: $text).textFieldStyle(.roundedBorder).padding(.horizontal)
+    }
+}
+
+@Observable
+class SearchViewModel {
+    var query: String = ""
+    var results: [String] = []
+    func search() {
+        results = query.isEmpty ? [] : ["Result for \(query)"]
+    }
+}
+
+struct DataFlowDemoView: View {
+    @State private var viewModel = SearchViewModel()
+    var body: some View {
+        VStack {
+            SearchBarView(text: $viewModel.query)
+            List(viewModel.results, id: \.self) { Text($0) }
+        }
+        .onChange(of: viewModel.query) { viewModel.search() }
+        .padding()
+    }
+}
+
+#Preview { SessionDemoView() }
+
+# Chapter 16
+
+Files: Chapter16_DataFlow.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

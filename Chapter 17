@@ -1,0 +1,151 @@
+// ============================================================
+// Chapter 17 — Networking, APIs, and JSON
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+import SwiftUI
+import Observation
+
+// MARK: - URL Building
+
+var components = URLComponents()
+components.scheme = "https"
+components.host   = "jsonplaceholder.typicode.com"
+components.path   = "/users"
+if let url = components.url { print(url) }
+
+// MARK: - Models
+
+struct APIUser: Codable, Identifiable, Hashable {
+    let id: Int; let name: String; let username: String; let email: String
+    let phone: String; let website: String
+    let address: APIAddress; let company: APICompany
+}
+struct APIAddress: Codable { let street: String; let city: String; let zipcode: String; let suite: String }
+struct APICompany: Codable { let name: String; let catchPhrase: String }
+
+// MARK: - Network Function
+
+func fetchUsers() async throws -> [APIUser] {
+    guard let url = URL(string: "https://jsonplaceholder.typicode.com/users") else {
+        throw URLError(.badURL)
+    }
+    let (data, response) = try await URLSession.shared.data(from: url)
+    guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+        throw URLError(.badServerResponse)
+    }
+    return try JSONDecoder().decode([APIUser].self, from: data)
+}
+
+// MARK: - Loading State
+
+enum LoadingState<T> {
+    case idle, loading, success(T), failure(String)
+}
+
+// MARK: - ViewModel
+
+@Observable @MainActor
+class UserListViewModel {
+    var state: LoadingState<[APIUser]> = .idle
+    func loadUsers() async {
+        state = .loading
+        do    { state = .success(try await fetchUsers()) }
+        catch { state = .failure(error.localizedDescription) }
+    }
+}
+
+// MARK: - SwiftUI View
+
+struct UserListView: View {
+    @State private var viewModel = UserListViewModel()
+    var body: some View {
+        NavigationStack {
+            Group {
+                switch viewModel.state {
+                case .idle:
+                    Text("Tap Refresh to load.").foregroundStyle(.secondary)
+                case .loading:
+                    ProgressView("Loading...").progressViewStyle(.circular)
+                case .success(let users):
+                    List(users) { user in
+                        NavigationLink(value: user) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(user.name).font(.headline)
+                                Text(user.email).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .navigationDestination(for: APIUser.self) { user in
+                        List {
+                            LabeledContent("Email",   value: user.email)
+                            LabeledContent("Phone",   value: user.phone)
+                            LabeledContent("City",    value: user.address.city)
+                            LabeledContent("Company", value: user.company.name)
+                        }
+                        .navigationTitle(user.name).navigationBarTitleDisplayMode(.inline)
+                    }
+                case .failure(let msg):
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
+                        Text("Failed to load").font(.headline)
+                        Text(msg).font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        Button("Try Again") { Task { await viewModel.loadUsers() } }.buttonStyle(.bordered)
+                    }
+                    .padding()
+                }
+            }
+            .navigationTitle("Users")
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Refresh") { Task { await viewModel.loadUsers() } }
+                }
+            }
+            .task { await viewModel.loadUsers() }
+        }
+    }
+}
+
+// MARK: - Reusable NetworkService
+
+enum NetworkError: Error, LocalizedError {
+    case invalidURL(String), httpError(statusCode: Int), decodingError(Error), unknown(Error)
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL(let u):    return "Invalid URL: \(u)"
+        case .httpError(let c):     return "HTTP \(c)"
+        case .decodingError(let e): return "Decode failed: \(e.localizedDescription)"
+        case .unknown(let e):       return e.localizedDescription
+        }
+    }
+}
+
+actor NetworkService {
+    static let shared = NetworkService()
+    private let session: URLSession
+    private let decoder: JSONDecoder
+    init(session: URLSession = .shared) {
+        self.session = session
+        self.decoder = JSONDecoder()
+        self.decoder.keyDecodingStrategy = .convertFromSnakeCase
+    }
+    func fetch<T: Decodable>(_ type: T.Type, from urlString: String) async throws -> T {
+        guard let url = URL(string: urlString) else { throw NetworkError.invalidURL(urlString) }
+        let (data, response): (Data, URLResponse)
+        do { (data, response) = try await session.data(from: url) }
+        catch { throw NetworkError.unknown(error) }
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw NetworkError.httpError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+        do { return try decoder.decode(T.self, from: data) }
+        catch { throw NetworkError.decodingError(error) }
+    }
+}
+
+#Preview { UserListView() }
+
+# Chapter 17
+
+Files: Chapter17_Networking.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.

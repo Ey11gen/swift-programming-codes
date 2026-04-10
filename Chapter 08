@@ -1,0 +1,114 @@
+// ============================================================
+// Chapter 08 — Protocols and Extensions
+// Swift Programming Language: A Modern Guide to iOS Development
+// ============================================================
+
+import Foundation
+
+// MARK: - Defining and Adopting Protocols
+
+protocol Describable { var description: String { get } }
+protocol Printable   { func printDetails() }
+
+struct Product: Describable, Printable {
+    var name: String; var price: Double
+    var description: String { "\(name) for $\(String(format: "%.2f", price))" }
+    func printDetails() { print("Product: \(description)") }
+}
+let item = Product(name: "Swift Book", price: 39.99)
+item.printDetails()
+
+func printDescription(_ item: Describable) { print(item.description) }
+printDescription(item)
+
+// MARK: - Protocol Inheritance and Composition
+
+protocol Named { var name: String { get } }
+protocol Aged  { var age: Int { get } }
+protocol PersonProfile: Named, Aged { var occupation: String { get } }
+
+struct Engineer: PersonProfile {
+    var name: String; var age: Int; var occupation: String
+}
+let eng = Engineer(name: "Leila", age: 34, occupation: "iOS Developer")
+
+func greet(_ person: Named & Aged) {
+    print("Hello \(person.name), age \(person.age).")
+}
+greet(eng)
+
+// MARK: - Equatable, Comparable, Hashable
+
+struct Coordinate: Equatable, Comparable, Hashable {
+    var x: Int; var y: Int
+    static func < (lhs: Coordinate, rhs: Coordinate) -> Bool {
+        lhs.x != rhs.x ? lhs.x < rhs.x : lhs.y < rhs.y
+    }
+}
+let c1 = Coordinate(x: 1, y: 2), c2 = Coordinate(x: 3, y: 0)
+print(c1 == c2, c1 < c2)
+let coordSet: Set<Coordinate> = [c1, c1, c2]
+print(coordSet.count) // 2
+
+// MARK: - Extensions
+
+extension Int {
+    var isEven: Bool { self % 2 == 0 }
+    var squared: Int { self * self }
+    func repeated(_ action: () -> Void) { for _ in 1...self { action() } }
+}
+print(7.isEven, 5.squared)
+3.repeated { print("Hello!") }
+
+extension String {
+    var wordCount: Int { self.split(separator: " ").count }
+    var isPalindrome: Bool {
+        let c = self.lowercased().filter { $0.isLetter }
+        return c == String(c.reversed())
+    }
+}
+print("Hello World Swift".wordCount)
+print("racecar".isPalindrome)
+
+// MARK: - Default Protocol Implementations
+
+protocol Animatable {
+    var duration: Double { get }
+    func animate()
+    func animateTwice()
+}
+extension Animatable {
+    func animateTwice() { animate(); animate() }
+    func animate() { print("Default animation over \(duration) seconds") }
+}
+struct FadeIn: Animatable {
+    var duration: Double
+    func animate() { print("Fading in over \(duration) seconds") }
+}
+let fade = FadeIn(duration: 0.5)
+fade.animateTwice()
+
+// MARK: - Protocol-Oriented Design
+
+protocol Formattable {
+    func formatted() -> String
+}
+extension Formattable {
+    func printFormatted() { print(formatted()) }
+}
+struct Currency: Formattable {
+    var amount: Double; var symbol: String
+    func formatted() -> String { "\(symbol)\(String(format: "%.2f", amount))" }
+}
+struct Percentage: Formattable {
+    var value: Double
+    func formatted() -> String { "\(String(format: "%.1f", value))%" }
+}
+let price = Currency(amount: 1299.99, symbol: "$")
+let disc  = Percentage(value: 15.5)
+[price, disc].forEach { $0.printFormatted() }
+
+# Chapter 08
+
+Files: Chapter08_ProtocolsAndExtensions.swift,
+Open any .swift file in Xcode. Chapters 14–20 require a SwiftUI App project.
